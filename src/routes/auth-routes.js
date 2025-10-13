@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { verifyIdToken } = require("../config/firebase-admin");
-const { sendVerificationEmail, verifyOTP } = require("../services/email-service");
+const { sendVerificationEmail, verifyOTP } = require("../services/resend-email-service");
 const { sendSMS } = require("../services/sms-service");
 const nodemailer = require('nodemailer');
 

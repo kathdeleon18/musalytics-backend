@@ -57,58 +57,14 @@ router.post("/send-email-otp", authenticateUser, async (req, res) => {
 
     console.log(`Sending email verification to ${email} for user ${userId}`);
     
-    // Generate OTP
-    const otp = generateOTP();
+    // Use Resend service to send email
+    const result = await sendVerificationEmail(userId, email, firstName);
     
-    // Store OTP with timestamp
-    otpStore.set(email, {
-      userId: userId,
-      code: otp,
-      expiresAt: Date.now() + 600000 // 10 minutes
-    });
-
-    // Email content
-    const mailOptions = {
-      from: `"MUSALYTICS" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Verify Your MUSALYTICS Account",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="color: #10b981;">MUSALYTICS</h1>
-            <p style="font-size: 18px; color: #333;">Account Verification</p>
-          </div>
-          
-          <div style="margin-bottom: 30px;">
-            <p>Hello ${firstName},</p>
-            <p>Thank you for registering with MUSALYTICS. To verify your account, please use the following verification code:</p>
-            
-            <div style="background-color: #f5f5f5; padding: 15px; text-align: center; margin: 20px 0; border-radius: 5px;">
-              <h2 style="margin: 0; letter-spacing: 5px; color: #333;">${otp}</h2>
-            </div>
-            
-            <p>This code will expire in 10 minutes.</p>
-            <p>If you didn't request this verification, please ignore this email.</p>
-          </div>
-          
-          <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; font-size: 12px; color: #777; text-align: center;">
-            <p>© ${new Date().getFullYear()} MUSALYTICS. All rights reserved.</p>
-          </div>
-        </div>
-      `,
-    };
-    
-    try {
-      const info = await transporter.sendMail(mailOptions);
-      console.log(`Email sent successfully to ${email}. Message ID: ${info.messageId}`);
-      
+    if (result.success) {
+      console.log(`Email sent successfully to ${email} via Resend`);
       return res.status(200).json({ success: true });
-    } catch (emailError) {
-      console.error("Error sending email:", emailError);
-      return res.status(500).json({ 
-        success: false, 
-        error: "Failed to send verification email. Please check your email configuration." 
-      });
+    } else {
+      throw new Error("Failed to send email via Resend");
     }
   } catch (error) {
     console.error("Error in send-email-otp route:", error);

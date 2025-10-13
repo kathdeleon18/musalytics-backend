@@ -4,6 +4,40 @@ const { verifyIdToken } = require("../config/firebase-admin");
 const { sendVerificationEmail, verifyOTP } = require("../services/resend-email-service");
 const { sendSMS } = require("../services/sms-service");
 
+// Test Resend API endpoint
+router.get("/test-resend", async (req, res) => {
+  try {
+    console.log("Testing Resend API...");
+    console.log("RESEND_API_KEY exists:", !!process.env.RESEND_API_KEY);
+    
+    if (!process.env.RESEND_API_KEY) {
+      return res.status(500).json({ 
+        error: "RESEND_API_KEY not found in environment variables" 
+      });
+    }
+    
+    // Test Resend API connection
+    const axios = require("axios");
+    const response = await axios.get("https://api.resend.com/domains", {
+      headers: {
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+      },
+    });
+    
+    res.json({ 
+      success: true, 
+      message: "Resend API is working",
+      domains: response.data 
+    });
+  } catch (error) {
+    console.error("Resend API test error:", error);
+    res.status(500).json({ 
+      error: "Resend API test failed",
+      details: error.message 
+    });
+  }
+});
+
 // Generate a random 6-digit OTP
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();

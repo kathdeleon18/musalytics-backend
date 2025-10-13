@@ -3,30 +3,6 @@ const router = express.Router();
 const { verifyIdToken } = require("../config/firebase-admin");
 const { sendVerificationEmail, verifyOTP } = require("../services/resend-email-service");
 const { sendSMS } = require("../services/sms-service");
-const nodemailer = require('nodemailer');
-
-// Create a transporter using SMTP with improved debugging
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || "smtp.gmail.com",
-  port: Number.parseInt(process.env.EMAIL_PORT || "587"),
-  secure: process.env.EMAIL_SECURE === "true",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-  debug: true,
-  logger: true
-});
-
-// Verify SMTP connection configuration
-transporter.verify(function(error, success) {
-  if (error) {
-    console.error('SMTP connection error details:', error);
-    console.error('Check your EMAIL_USER and EMAIL_PASSWORD environment variables');
-  } else {
-    console.log('SMTP server is ready to take our messages');
-  }
-});
 
 // Generate a random 6-digit OTP
 const generateOTP = () => {

@@ -486,6 +486,32 @@ app.post("/api/auth/verify-otp", async (req, res) => {
   }
 })
 
+// API root endpoint
+app.get("/api", (req, res) => {
+  res.json({
+    message: "MUSALYTICS Backend API",
+    version: "1.0.0",
+    endpoints: {
+      auth: "/api/auth",
+      images: "/api/images", 
+      analysis: "/api/analysis",
+      treatments: "/api/treatments",
+      websocket: "/websocket/status"
+    }
+  })
+})
+
+// Auth root endpoint
+app.get("/api/auth", (req, res) => {
+  res.json({
+    message: "MUSALYTICS Authentication API",
+    endpoints: {
+      sendEmailOTP: "POST /api/auth/send-email-otp",
+      verifyOTP: "POST /api/auth/verify-otp"
+    }
+  })
+})
+
 // Register routes
 app.use("/api", imageRoutes)
 app.use("/api", analysisRoutes)
@@ -510,7 +536,7 @@ app.use((err, req, res, next) => {
 })
 
 // Start server
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 8080
 server.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`)
   console.log(`WebSocket server running on ws://localhost:${PORT}`)

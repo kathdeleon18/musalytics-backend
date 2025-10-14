@@ -22,7 +22,14 @@ app.use((req, res, next) => {
 // Middleware
 const corsOrigins = process.env.CORS_ORIGINS 
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-  : ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5000", "http://localhost:3000"];
+  : [
+      "http://localhost:5173", 
+      "http://127.0.0.1:5173", 
+      "http://localhost:5000", 
+      "http://localhost:3000",
+      "https://musalytics.onrender.com",
+      "https://musalytics-frontend.vercel.app"
+    ];
 
 app.use(
   cors({

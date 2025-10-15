@@ -1,40 +1,30 @@
 const express = require("express");
 const router = express.Router();
 const { verifyIdToken } = require("../config/firebase-admin");
-const { sendVerificationEmail, verifyOTP } = require("../services/resend-email-service");
+const { sendVerificationEmail, verifyOTP } = require("../services/email-service");
 const { sendSMS } = require("../services/sms-service");
+const nodemailer = require('nodemailer');
 
-// Test Resend API endpoint
-router.get("/test-resend", async (req, res) => {
-  try {
-    console.log("Testing Resend API...");
-    console.log("RESEND_API_KEY exists:", !!process.env.RESEND_API_KEY);
-    
-    if (!process.env.RESEND_API_KEY) {
-      return res.status(500).json({ 
-        error: "RESEND_API_KEY not found in environment variables" 
-      });
-    }
-    
-    // Test Resend API connection
-    const axios = require("axios");
-    const response = await axios.get("https://api.resend.com/domains", {
-      headers: {
-        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-      },
-    });
-    
-    res.json({ 
-      success: true, 
-      message: "Resend API is working",
-      domains: response.data 
-    });
-  } catch (error) {
-    console.error("Resend API test error:", error);
-    res.status(500).json({ 
-      error: "Resend API test failed",
-      details: error.message 
-    });
+// Create a transporter using SMTP
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || "smtp.gmail.com",
+  port: Number.parseInt(process.env.EMAIL_PORT || "587"),
+  secure: process.env.EMAIL_SECURE === "true",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+  debug: true,
+  logger: true
+});
+
+// Verify SMTP connection configuration
+transporter.verify(function(error, success) {
+  if (error) {
+    console.error('SMTP connection error details:', error);
+    console.error('Check your EMAIL_USER and EMAIL_PASSWORD environment variables');
+  } else {
+    console.log('SMTP server is ready to take our messages');
   }
 });
 
@@ -91,14 +81,58 @@ router.post("/send-email-otp", authenticateUser, async (req, res) => {
 
     console.log(`Sending email verification to ${email} for user ${userId}`);
     
-    // Use Resend service to send email
-    const result = await sendVerificationEmail(userId, email, firstName);
+    // Generate OTP
+    const otp = generateOTP();
     
-    if (result.success) {
-      console.log(`Email sent successfully to ${email} via Resend`);
+    // Store OTP with timestamp
+    otpStore.set(email, {
+      userId: userId,
+      code: otp,
+      expiresAt: Date.now() + 600000 // 10 minutes
+    });
+
+    // Email content
+    const mailOptions = {
+      from: `"MUSALYTICS" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Verify Your MUSALYTICS Account",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #10b981;">MUSALYTICS</h1>
+            <p style="font-size: 18px; color: #333;">Account Verification</p>
+          </div>
+          
+          <div style="margin-bottom: 30px;">
+            <p>Hello ${firstName},</p>
+            <p>Thank you for registering with MUSALYTICS. To verify your account, please use the following verification code:</p>
+            
+            <div style="background-color: #f5f5f5; padding: 15px; text-align: center; margin: 20px 0; border-radius: 5px;">
+              <h2 style="margin: 0; letter-spacing: 5px; color: #333;">${otp}</h2>
+            </div>
+            
+            <p>This code will expire in 10 minutes.</p>
+            <p>If you didn't request this verification, please ignore this email.</p>
+          </div>
+          
+          <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; font-size: 12px; color: #777; text-align: center;">
+            <p>© ${new Date().getFullYear()} MUSALYTICS. All rights reserved.</p>
+          </div>
+        </div>
+      `,
+    };
+    
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log(`Email sent successfully to ${email}. Message ID: ${info.messageId}`);
+      
       return res.status(200).json({ success: true });
-    } else {
-      throw new Error("Failed to send email via Resend");
+    } catch (emailError) {
+      console.error("Error sending email:", emailError);
+      return res.status(500).json({ 
+        success: false, 
+        error: "Failed to send verification email. Please check your email configuration." 
+      });
     }
   } catch (error) {
     console.error("Error in send-email-otp route:", error);

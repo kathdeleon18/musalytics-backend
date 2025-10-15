@@ -58,20 +58,74 @@ const wss = new WebSocket.Server({ server })
 global.wss = wss
 
 /**
- * Find similar diseases in the database based on image features or metadata
+ * Find similar diseases using the ML model
  * @param {string} imageUrl - URL of the image to analyze
  * @returns {Promise<Object>} - Analysis results
  */
 async function findSimilarDiseasesInDatabase(imageUrl) {
   try {
-    console.log("Searching for similar diseases in database")
+    console.log("Calling ML model for analysis:", imageUrl)
 
-    // Since we don't have Firebase, we'll use the fallback
-    return generateFallbackResult()
+    const axios = require('axios')
+    const ML_MODEL_URL = process.env.ML_MODEL_URL || 'https://musalytics-ml-model-261739105523.asia-southeast1.run.app'
+
+    // Call the ML model
+    const response = await axios.post(`${ML_MODEL_URL}/predict`, {
+      image_url: imageUrl
+    }, {
+      timeout: 30000, // 30 second timeout
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (response.data && response.data.success) {
+      console.log("ML model analysis successful:", response.data.detection)
+      return {
+        detections: [{
+          label: response.data.detection.name,
+          scientificName: response.data.detection.name.replace(/_/g, ' '),
+          confidence: response.data.detection.confidence / 100, // Convert to 0-1 range
+          severity: response.data.detection.severity,
+          boundingBox: { x: 10, y: 15, width: 80, height: 70 },
+          description: response.data.detection.description,
+          treatments: getTreatmentsForDisease(response.data.detection.name),
+          source: "ml_model"
+        }],
+        processingTime: 2.5
+      }
+    } else {
+      console.log("ML model returned unexpected response, using fallback")
+      return generateFallbackResult()
+    }
   } catch (error) {
-    console.error("Error finding similar diseases:", error)
+    console.error("Error calling ML model:", error.message)
+    console.log("Falling back to mock analysis")
     return generateFallbackResult()
   }
+}
+
+/**
+ * Get treatments for a specific disease
+ * @param {string} diseaseName - Name of the disease
+ * @returns {Array} - Array of treatment recommendations
+ */
+function getTreatmentsForDisease(diseaseName) {
+  const treatments = {
+    'bacterial_soft_rot': ['Remove infected plant parts', 'Improve drainage', 'Apply copper-based fungicide'],
+    'banana_aphids': ['Apply insecticidal soap', 'Introduce natural predators', 'Remove affected leaves'],
+    'banana_insect_pest': ['Apply appropriate insecticide', 'Monitor regularly', 'Remove affected areas'],
+    'banana_moko_disease': ['Remove infected plants', 'Disinfect tools', 'Improve soil drainage'],
+    'black_sigatoka': ['Apply fungicide spray', 'Remove infected leaves', 'Improve air circulation'],
+    'bract_mosaic_virus': ['Remove infected plants', 'Control aphid vectors', 'Use virus-free planting material'],
+    'fruit_scarring_beetle': ['Apply insecticide', 'Remove affected fruits', 'Maintain clean surroundings'],
+    'healthy_leaf': ['Continue current care', 'Monitor regularly', 'Maintain good nutrition'],
+    'panama_disease': ['Use resistant varieties', 'Quarantine infected areas', 'Improve soil health'],
+    'pseudostem_weevil': ['Apply systemic insecticide', 'Remove affected plants', 'Use pheromone traps'],
+    'yellow_sigatoka': ['Apply fungicide', 'Remove infected leaves', 'Improve air circulation']
+  }
+  
+  return treatments[diseaseName] || ['Consult agricultural expert', 'Monitor plant health', 'Apply appropriate treatment']
 }
 
 /**

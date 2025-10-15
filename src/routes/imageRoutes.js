@@ -85,6 +85,7 @@ router.post('/images/upload', express.json(), async (req, res) => {
                 imageId,
                 analysisId,
                 fileName,
+                firebaseUrl,
                 uploadedAt: timestamp
             });
         } catch (err) {

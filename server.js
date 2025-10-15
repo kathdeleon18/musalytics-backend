@@ -603,4 +603,4 @@ server.listen(PORT, () => {
   console.log(`WebSocket server running on ws://localhost:${PORT}`)
 })
 
-module.exports = { app, wss }
+module.exports = { app, wss, findSimilarDiseasesInDatabase }

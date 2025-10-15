@@ -98,4 +98,56 @@ router.get('/analyses/recent', (req, res) => {
     return res.redirect(307, `/api/scans/recent?${new URLSearchParams(req.query).toString()}`);
 });
 
+// New HTTP-based analysis endpoint
+router.post('/analyze', async (req, res) => {
+    try {
+        const { imageUrl, userId } = req.body;
+        
+        if (!imageUrl) {
+            return res.status(400).json({ error: 'Image URL is required' });
+        }
+        
+        console.log('Starting HTTP-based analysis for image:', imageUrl);
+        
+        // Import the analysis function from server.js
+        const { findSimilarDiseasesInDatabase } = require('../../server');
+        
+        // Perform analysis
+        const analysisResult = await findSimilarDiseasesInDatabase(imageUrl);
+        
+        // Generate analysis ID
+        const analysisId = uuidv4();
+        
+        // Save analysis to database
+        const analysis = {
+            analysisId,
+            imageId: imageUrl.split('/').pop() || 'unknown',
+            userId: userId || null,
+            detection: analysisResult.detections[0],
+            timestamp: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+        };
+        
+        analysesDb.push(analysis);
+        
+        // Return results
+        res.status(200).json({
+            success: true,
+            analysisId,
+            results: {
+                detections: analysisResult.detections,
+                processingTime: analysisResult.processingTime,
+                timestamp: analysis.timestamp
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error in HTTP analysis:', error);
+        res.status(500).json({ 
+            error: 'Analysis failed', 
+            details: error.message 
+        });
+    }
+});
+
 module.exports = router;

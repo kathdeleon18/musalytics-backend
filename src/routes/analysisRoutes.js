@@ -99,7 +99,7 @@ router.get('/analyses/recent', (req, res) => {
 });
 
 // New HTTP-based analysis endpoint
-router.post('/analyze', async (req, res) => {
+router.post('/analysis/analyze', async (req, res) => {
     try {
         const { imageUrl, userId } = req.body;
         
